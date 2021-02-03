@@ -15,7 +15,7 @@ autocmd FileType ruby setlocal commentstring=#\ %s
 " file search using fuzzy file search
 nnoremap <silent> <C-f> :FZF<CR>
 " keyword search using ripgrep and fzf
-nnoremap <silent> <C-d> :RG<CR><CR>
+nnoremap <silent> <C-g> :RG<CR><CR>
 
 " nerdtree toggle
 map <C-q> :NERDTreeToggle<CR>

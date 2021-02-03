@@ -1,5 +1,5 @@
-" colorscheme eclipse
-" colors summerfruit
-color onehalflight
+" color summerfruit256
+" color onehalflight
 " colorscheme ayu
-" colors eclipse
+" color eclipse
+color hemisu
