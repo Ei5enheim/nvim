@@ -39,3 +39,6 @@ set expandtab       " Expand TABs to spaces.
 " auto copy
 set mouse=a
 vmap <LeftRelease> "*ygv
+
+" spell check
+set spell spelllang=en_ca
