@@ -2,7 +2,7 @@
 " nnoremap <silent> <Leader>f :NERDTreeFind<CR> 
 
 " this is the key to jump to the nerdtree window from any other window
-map <Leader>n :NERDTreeFind<cr>
+map <C-n> :NERDTreeFind<cr>
 " pressing this inside any open file in vim will jump to the nerdtree and highlight where that file is -> very useful when you have multiple files open at 
 map ] :NERDTreeFind<CR>
 
@@ -31,3 +31,11 @@ nnoremap <silent> ]q :cnext<CR>
 " towards left and right tab
 nnoremap <C-h> :tabprevious<CR>
 nnoremap <C-l> :tabnext<CR>
+
+" file path
+:nmap <C-S-c> :let @+ = expand("%")<cr>
+" full path
+:nmap <C-S-a> :let @+ = expand("%:p")<cr>
+" file name
+:nmap <C-S-n> :let @+ = expand("%:t")<cr>
+
