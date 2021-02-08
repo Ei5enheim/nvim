@@ -37,12 +37,16 @@ let g:fzf_colors =
   \ 'spinner': ['fg', 'Label'],
   \ 'header':  ['fg', 'Comment'] }
 
+" Any empty ack search will search for the work the cursor is on
+let g:rg_use_cword_for_empty_search = 1
+
 function! RipgrepFzf(query, fullscreen)
+  echo "im here"
   " Check user policy for blank searches
   if empty(a:query)
     echo "args is empty"
     if !g:rg_use_cword_for_empty_search
-      echo "No regular expression found."
+      echo "Empty search is disabled"
       return
     endif
   endif
@@ -53,7 +57,7 @@ function! RipgrepFzf(query, fullscreen)
   "Bypass search if cursor is on blank string
   if l:grepargs == ""
     echo "No regular expression found."
-    return
+    " return
   endif
 
   echo "Searching ..."
@@ -66,6 +70,3 @@ function! RipgrepFzf(query, fullscreen)
 endfunction
 
 command! -nargs=* -bang RG call RipgrepFzf(<q-args>, <bang>0)
-
-" Any empty ack search will search for the work the cursor is on
-let g:rg_use_cword_for_empty_search = 1

@@ -42,3 +42,5 @@ vmap <LeftRelease> "*ygv
 
 " spell check
 set spell spelllang=en_ca
+" Any empty ack search will search for the work the cursor is on
+let g:rg_use_cword_for_empty_search = 1
