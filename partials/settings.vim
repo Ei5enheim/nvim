@@ -44,3 +44,4 @@ vmap <LeftRelease> "*ygv
 set spell spelllang=en_ca
 " Any empty ack search will search for the work the cursor is on
 let g:rg_use_cword_for_empty_search = 1
+let g:auto_save = 1  " enable AutoSave on Vim startup

@@ -14,5 +14,6 @@ Plug 'tpope/vim-commentary'
 Plug 'sonph/onehalf', { 'rtp': 'vim' }
 Plug 'flazz/vim-colorschemes'
 Plug 'mileszs/ack.vim'
+Plug '907th/vim-auto-save'
 " List ends here. Plugins become visible to Vim after this call.
 call plug#end()
