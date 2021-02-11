@@ -35,7 +35,7 @@ nnoremap <C-l> :tabnext<CR>
 " file path
 :nmap <C-S-c> :let @+ = expand("%")<cr>
 " full path
-:nmap <C-S-a> :let @+ = expand("%:p")<cr>
+:nmap <C-S-p> :let @+ = expand("%:p")<cr>
 " file name
 :nmap <C-S-n> :let @+ = expand("%:t")<cr>
 
