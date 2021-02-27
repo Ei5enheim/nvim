@@ -49,3 +49,7 @@ let g:auto_save = 1  " enable AutoSave on Vim startup
 " for insert mode
 " shfit tab
 inoremap <S-Tab> <C-d>
+
+" to copy to&from system clipboard instead of vim registester
+" see :help clipboard
+set clipboard+=unnamedplus
