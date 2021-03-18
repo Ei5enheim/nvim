@@ -39,3 +39,5 @@ nnoremap <C-l> :tabnext<CR>
 " file name
 :nmap <C-S-n> :let @+ = expand("%:t")<cr>
 
+" toggle keyword search highlight
+nnoremap <F3> :set hlsearch!<CR>

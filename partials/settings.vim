@@ -45,3 +45,11 @@ set spell spelllang=en_ca
 " Any empty ack search will search for the work the cursor is on
 let g:rg_use_cword_for_empty_search = 1
 let g:auto_save = 1  " enable AutoSave on Vim startup
+
+" for insert mode
+" shfit tab
+inoremap <S-Tab> <C-d>
+
+" to copy to&from system clipboard instead of vim registester
+" see :help clipboard
+set clipboard+=unnamedplus
