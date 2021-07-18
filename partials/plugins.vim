@@ -16,5 +16,6 @@ Plug 'flazz/vim-colorschemes'
 Plug 'mileszs/ack.vim'
 Plug '907th/vim-auto-save'
 Plug 'editorconfig/editorconfig-vim'
+Plug 'sheerun/vim-polyglot'
 " List ends here. Plugins become visible to Vim after this call.
 call plug#end()

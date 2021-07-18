@@ -41,3 +41,6 @@ nnoremap <C-l> :tabnext<CR>
 
 " toggle keyword search highlight
 nnoremap <F3> :set hlsearch!<CR>
+
+" reload buffers
+:nmap <silent> <C-S-r> :bufdo :e!<cr>
