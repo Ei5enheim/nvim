@@ -1,13 +1,31 @@
 " user nerdtree find to search 
 " nnoremap <silent> <Leader>f :NERDTreeFind<CR> 
+"
+" dd line in insert mode:imap <c-
+inoremap <C-d> <esc>ddi
+
+let mapleader = ","
+
+" source vimrc
+nnoremap <leader>sv :source $MYVIMRC<cr>
+
+" open vimrc
+nnoremap <leader>ev :split $MYVIMRC<cr>
+
+" UPPERCASE CURRENT word
+inoremap <C-u> <esc>viwU<esc>i
+
+" edit my vimrc file
+nnoremap :vsplit $MYVIMRC<cr>
 
 " this is the key to jump to the nerdtree window from any other window
-map <C-n> :NERDTreeFind<cr>
+noremap <C-n> :NERDTreeFind<cr>
 " pressing this inside any open file in vim will jump to the nerdtree and highlight where that file is -> very useful when you have multiple files open at 
-map ] :NERDTreeFind<CR>
+noremap ] :NERDTreeFind<CR>
 
 " bulk commenting
-vnoremap <C-\> :Commentary<CR>
+noremap <C-\> v:Commentary<CR>
+" set ruby comment character
 autocmd FileType ruby setlocal commentstring=#\ %s
 
 " search config
@@ -18,7 +36,7 @@ nnoremap <silent> <C-f> :FZF<CR>
 nnoremap <silent> <C-g> :RG<CR><CR>
 
 " nerdtree toggle
-map <C-q> :NERDTreeToggle<CR>
+noremap <C-q> :NERDTreeToggle<CR>
 
 " Maps <leader>/ so we're ready to type the search keyword
 " nnoremap <C-space> :Ack!<Space>
@@ -33,14 +51,21 @@ nnoremap <C-h> :tabprevious<CR>
 nnoremap <C-l> :tabnext<CR>
 
 " file path
-:nmap <C-S-c> :let @+ = expand("%")<cr>
+nnoremap <C-rp> :let @+ = expand("%")<cr>
 " full path
-:nmap <C-S-p> :let @+ = expand("%:p")<cr>
+nnoremap <C-ap> :let @+ = expand("%:p")<cr>
 " file name
-:nmap <C-S-n> :let @+ = expand("%:t")<cr>
+:nnoremap <C-n> :let @+ = expand("%:t")<cr>
 
 " toggle keyword search highlight
 nnoremap <F3> :set hlsearch!<CR>
 
 " reload buffers
-:nmap <silent> <C-S-r> :bufdo :e!<cr>
+:nnoremap <silent> <C-S-r> :bufdo :e!<cr>
+
+" find and replace
+" nnoremap <C-R>
+"   \ :let @s='\<'.expand('<cword>').'\>'<CR>
+"   \ :Grepper -cword -noprompt<CR>
+"   \ :cfdo %s/<C-r>s//g \| update
+"   \<Left><Left><Left><Left><Left><Left><Left><Left><Left><Left><Left>

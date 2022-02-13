@@ -4,6 +4,7 @@ runtime! partials/fzf.vim
 runtime! partials/colorscheme.vim
 runtime! partials/nerdtree.vim
 runtime! partials/mappings.vim
+runtime! partials/lang_mappings/*.vim
 " runtime! partials/coc.vim
 " runtime! partials/mappings.vim
 " runtime! partials/abbreviations.vim

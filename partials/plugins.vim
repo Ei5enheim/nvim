@@ -17,5 +17,7 @@ Plug 'mileszs/ack.vim'
 Plug '907th/vim-auto-save'
 Plug 'editorconfig/editorconfig-vim'
 Plug 'sheerun/vim-polyglot'
+Plug 'haya14busa/is.vim'
+Plug 'mhinz/vim-grepper'
 " List ends here. Plugins become visible to Vim after this call.
 call plug#end()

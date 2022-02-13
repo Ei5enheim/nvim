@@ -24,6 +24,8 @@ set nofoldenable
 set autowrite 
 set modifiable
 
+set list listchars=tab:>\ ,trail:-,eol:$ "set list chars
+
 set t_Co=256
 
 set ruler
@@ -46,6 +48,12 @@ set spell spelllang=en_ca
 let g:rg_use_cword_for_empty_search = 1
 let g:auto_save = 1  " enable AutoSave on Vim startup
 
+" vim - grepper
+let g:grepper={}
+let g:grepper.tools=["rg"]
+
+xmap gr <plug>(GrepperOperator)
+
 " for insert mode
 " shfit tab
 inoremap <S-Tab> <C-d>
@@ -53,3 +61,12 @@ inoremap <S-Tab> <C-d>
 " to copy to&from system clipboard instead of vim registester
 " see :help clipboard
 set clipboard+=unnamedplus
+
+" hybrid line numbers
+"set nu rnu
+:set number relativenumber
+:augroup numbertoggle
+:  autocmd!
+:  autocmd BufEnter,FocusGained,InsertLeave * set relativenumber
+:  autocmd BufLeave,FocusLost,InsertEnter   * set norelativenumber
+:augroup END
