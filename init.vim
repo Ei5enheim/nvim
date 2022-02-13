@@ -4,6 +4,7 @@ runtime! partials/fzf.vim
 runtime! partials/colorscheme.vim
 runtime! partials/nerdtree.vim
 runtime! partials/mappings.vim
+runtime! partials/lang_mappings/*.vim
 " runtime! partials/coc.vim
 " runtime! partials/mappings.vim
 " runtime! partials/abbreviations.vim
@@ -18,6 +19,10 @@ syntax on             " Turn on syntax highlighting
 " auto indent ruby and erb files
 autocmd FileType ruby setlocal expandtab shiftwidth=2 tabstop=2
 autocmd FileType eruby setlocal expandtab shiftwidth=2 tabstop=2
+
+augroup filetype
+  au! BufRead,BufNewFile *.proto setfiletype proto
+augroup end
 
 " Make an undo directory if it does not exist
 if !isdirectory($HOME . "/.config/nvim/undo")

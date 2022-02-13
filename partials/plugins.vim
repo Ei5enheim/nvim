@@ -1,5 +1,5 @@
 " Plugins will be downloaded under the specified directory.
-call plug#begin('~/.vim/plugged')
+call plug#begin('~/.config/nvim/plugged')
 
 " Declare the list of plugins.
 Plug 'tpope/vim-sensible'
@@ -15,5 +15,9 @@ Plug 'sonph/onehalf', { 'rtp': 'vim' }
 Plug 'flazz/vim-colorschemes'
 Plug 'mileszs/ack.vim'
 Plug '907th/vim-auto-save'
+Plug 'editorconfig/editorconfig-vim'
+Plug 'sheerun/vim-polyglot'
+Plug 'haya14busa/is.vim'
+Plug 'mhinz/vim-grepper'
 " List ends here. Plugins become visible to Vim after this call.
 call plug#end()
