@@ -24,7 +24,7 @@ noremap <C-n> :NERDTreeFind<cr>
 noremap ] :NERDTreeFind<CR>
 
 " bulk commenting
-noremap <C-\> v:Commentary<CR>
+noremap <C-\> :Commentary<CR>
 " set ruby comment character
 autocmd FileType ruby setlocal commentstring=#\ %s
 
@@ -51,11 +51,11 @@ nnoremap <C-h> :tabprevious<CR>
 nnoremap <C-l> :tabnext<CR>
 
 " file path
-nnoremap <C-rp> :let @+ = expand("%")<cr>
+nnoremap <C-C> :let @+ = expand("%")<cr>
 " full path
-nnoremap <C-ap> :let @+ = expand("%:p")<cr>
+nnoremap <C-P> :let @+ = expand("%:p")<cr>
 " file name
-:nnoremap <C-n> :let @+ = expand("%:t")<cr>
+:nnoremap <C-N> :let @+ = expand("%:t")<cr>
 
 " toggle keyword search highlight
 nnoremap <F3> :set hlsearch!<CR>
