@@ -1,0 +1,252 @@
+package com.amazon.lmusersubscriptionservice.asyncWorkflows;
+
+
+import com.amazon.coral.metrics.Metrics;
+import com.amazon.coral.metrics.helper.MetricsHelper;
+import com.amazon.lmusersubscriptionservice.exception.ErrorCode;
+import com.amazon.lmusersubscriptionservice.exception.TransactionFailedException;
+import com.amazon.lmusersubscriptionservice.persistence.FASTable;
+import com.amazon.lmusersubscriptionservice.persistence.IdentityProviderTable;
+import com.amazon.lmusersubscriptionservice.persistence.InstanceUserTable;
+import com.amazon.lmusersubscriptionservice.persistence.ProductUserTable;
+import com.amazon.lmusersubscriptionservice.utils.ADUtils;
+import com.amazon.lmusersubscriptionservice.utils.Constants;
+import com.amazon.lmusersubscriptionservice.validator.UserTransactionContextValidator;
+mport com.amazonaws.galaxy.service.DirectoryDescription;
+import com.amazonaws.liss.persistence.dao.FAS;
+import com.amazonaws.liss.persistence.dao.IdentityProvider;
+import com.amazonaws.liss.persistence.dao.InstanceUser;
+import com.amazonaws.liss.persistence.dao.InstanceUserStatus;
+import com.amazonaws.liss.persistence.dao.ProductUser;
+import com.amazonaws.liss.persistence.dao.Transaction;
+import com.amazonaws.liss.persistence.dao.TransactionStatus;
+import com.amazonaws.usersubscription.asyncWorkflows.AuthorizeUserUtils;
+import com.amazonaws.usersubscription.asyncWorkflows.utils.AuthorizeUserRequest;
+import com.amazonaws.usersubscription.misc.ADHelperException;
+import lombok.NonNull;
+import lombok.extern.log4j.Log4j2;
+
+import javax.inject.Inject;
+import javax.measure.unit.SI;
+import javax.measure.unit.Unit;
+import java.time.ZoneOffset;
+
+import static com.amazon.lmusersubscriptionservice.utils.Constants.MetricsConstants.ASSOCIATE_USER_TX;
+import static com.amazon.lmusersubscriptionservice.utils.Constants.MetricsConstants.FAILURE;
+import static com.amazon.lmusersubscriptionservice.utils.Constants.MetricsConstants.OPERATION;
+import static com.amazon.lmusersubscriptionservice.utils.Constants.MetricsConstants.SUCCESS;
+import static com.amazon.lmusersubscriptionservice.utils.Constants.MetricsConstants.TIME;
+
+@Log4j2
+public class AuthorizeUserForProductAsyncWorkflowActivity implements AsyncActivity {
+
+    @NonNull
+    private final InstanceUserTable instanceUserTable;
+
+    @NonNull
+    private final IdentityProviderTable identityProviderTable;
+
+    @NonNull
+    private final AuthorizeUserUtils authorizeUserUtils;
+
+    @NonNull
+    private final FASTable fasTable;
+
+    @NonNull
+    private final ADUtils adUtils;
+
+    private final boolean isAdHelperDisabled;
+
+    @NonNull
+    private final MetricsHelper metricsHelper;
+
+    @NonNull
+    private final ProductUserTable productUserTable;
+
+    @Inject
+    public AuthorizeUserForProductAsyncWorkflowActivity(final InstanceUserTable instanceUserTable,
+                                                        final IdentityProviderTable identityProviderTable,
+                                                        final AuthorizeUserUtils authorizeUserUtils,
+                                                        final FASTable fasTable,
+                                                        final ADUtils adUtils,
+                                                        final boolean isAdHelperDisabled,
+                                                        final MetricsHelper metricsHelper,
+                                                        final ProductUserTable productUserTable) {
+        this.metricsHelper = metricsHelper;
+        this.instanceUserTable = instanceUserTable;
+        this.identityProviderTable = identityProviderTable;
+        this.authorizeUserUtils = authorizeUserUtils;
+        this.fasTable = fasTable;
+        this.isAdHelperDisabled = isAdHelperDisabled;
+        this.adUtils = adUtils;
+        this.productUserTable = productUserTable;
+    }
+
+    /**
+     * Execute Transaction to Authorize User for Product.
+     *
+     * @param transaction transaction.
+     */
+    @Override
+    public void executeTransaction(Transaction transaction) {
+        InstanceUser instanceUser = null;
+        ProductUser productUser = null;
+
+        long startTime = System.currentTimeMillis();
+        try {
+            // Validation for null check for userTransactionContext
+            final UserTransactionContextValidator userTransactionContextValidator = new UserTransactionContextValidator();
+            userTransactionContextValidator.validateTransaction(transaction);
+
+            log.info("Executing the transaction {}", transaction);
+            final Transaction.InstanceUserTransactionContext instanceUserTransactionContext = transaction
+                    .getTransactionContext().getInstanceUserTransactionContext();
+
+            final String identityProviderId = instanceUserTransactionContext.getIdentityProviderId();
+            final String instanceId = instanceUserTransactionContext.getInstanceId();
+            final String username = instanceUserTransactionContext.getUsername();
+            final String customerAccountId = transaction.getAccountId();
+            final String domain = instanceUserTransactionContext.getDomain();
+            final String region = instanceUserTransactionContext.getRegion();
+            final String userDomainName = instanceUserTransactionContext.getUserDomainName();
+
+            log.info("Retrieving identity provider {}, {}", customerAccountId, identityProviderId);
+            final IdentityProvider identityProvider = identityProviderTable
+                    .getIdentityProviderFromPrimaryKey(customerAccountId, identityProviderId);
+
+            final String productCode = identityProvider.getProductCode();
+            final String activeDirectoryId = identityProvider.getActiveDirectoryIdentityProvider().getDirectoryId();
+            log.info("Retrieving the product user {}, {}, {}, {}, {}", customerAccountId,
+                    activeDirectoryId, productCode, username, userDomainName);
+            productUser = productUserTable.getProductUser(customerAccountId, activeDirectoryId,
+                    productCode, username, userDomainName);
+            log.info("Retrieved the product user {}", productUser);
+
+            log.info("Retrieving the instance user {}, {}, {}, {}, {}, {}", customerAccountId,
+                    activeDirectoryId, productCode, instanceId, username, userDomainName);
+            instanceUser = instanceUserTable
+                    .getUserByUsername(customerAccountId, activeDirectoryId, productCode,
+                            instanceId, username, userDomainName);
+            log.info("retrieved the instance user {}", instanceUser);
+
+            if(!isAdHelperDisabled) {
+                log.info("Retrieving the FAS entity");
+                final String fasId = transaction.getFasHashKey();
+                final FAS fas = fasTable.getFASEntity(fasId);
+
+                log.info("Retrieving directory description from GIS {}, {}", activeDirectoryId, region);
+                final DirectoryDescription directoryDescription = adUtils.getDirectory(activeDirectoryId, region, fas);
+                final String alias = directoryDescription.getAlias();
+                final String domainName = directoryDescription.getName();
+
+                final AuthorizeUserRequest authorizeUserRequest = AuthorizeUserRequest
+                        .builder()
+                        .userName(username)
+                        .userDomainName(userDomainName)
+                        .domainName(domainName)
+                        .directoryId(activeDirectoryId)
+                        .alias(alias)
+                        .domain(domain)
+                        .region(region)
+                        .fas(fas)
+                        .instanceId(instanceId)
+                        .txId(transaction.getPartitionKey())
+                        .serviceAccountId(transaction.getServiceAccountId())
+                        .build();
+                log.info("Calling AuthorizeUserUtils with request {}", authorizeUserRequest);
+                authorizeUserUtils.authorizeUser(authorizeUserRequest);
+            }
+            // Setting IdentityProviderUser as ASSOCIATED
+            log.info("Setting identityProviderUser {} Resource Status Associated", instanceUser);
+            handleInstanceUserAssociationSuccess(transaction, instanceUser);
+            updateAssociationCountOnSuccess(productUser);
+            setMetrics(startTime, false);
+            log.info("AuthorizeUserForProductAsyncWorkflow completed.");
+        } catch (final ADHelperException e) {
+            log.error("ADHelperException while associating user to instance {}",  instanceUser, e);
+            handleInstanceUserFailureADException(transaction, instanceUser, e, startTime);
+            final ErrorCode errorCode = ErrorCode.getErrorCode(e.getErrorCode());
+            throw new TransactionFailedException(Constants.ErrorMessages.INSTANCE_USER_ASSOCIATION_FAILURE, e, errorCode);
+        } catch (final Exception e) {
+            log.error("Exception while associating user to instance {}",  instanceUser, e);
+            handleInstanceUserFailureException(transaction, instanceUser, startTime);
+            throw new TransactionFailedException(Constants.ErrorMessages.INSTANCE_USER_ASSOCIATION_FAILURE, e, ErrorCode.SERVICE_ERROR);
+        }
+    }
+
+    private void handleInstanceUserAssociationSuccess(final Transaction transaction, final InstanceUser instanceUser) {
+        final ZonedDateTime currentTime = ZonedDateTime.now(ZoneOffset.UTC);
+        instanceUser.setResourceStatus(InstanceUserStatus.ASSOCIATED);
+        instanceUser.setLastUpdateTime(currentTime.toEpochSecond());
+        instanceUser.setAssociationTime(currentTime.toEpochSecond());
+        instanceUser.setDisassociationTime(null);
+        instanceUser.setLastTransactionId(transaction.getPartitionKey() + ":" + transaction.getCreationTime());
+        instanceUser.setLastTransactionExecutionStatus(TransactionStatus.COMPLETED.toString());
+        instanceUser.setStatusMessage(null);
+        instanceUser.setExpirationTime(null);
+        instanceUserTable.saveUser(instanceUser);
+    }
+
+    private void handleInstanceUserFailureADException(final Transaction transaction,
+                                                      final InstanceUser instanceUser,
+                                                      final ADHelperException exception,
+                                                      final long startTime) {
+        final ErrorCode errorCode = ErrorCode.getErrorCode(exception.getErrorCode());
+        final String errorMessage;
+        final TransactionStatus transactionStatus;
+        if (errorCode == ErrorCode.CUSTOMER_ERROR) {
+            errorMessage = exception.getMessage();
+            transactionStatus = TransactionStatus.CUSTOMER_ERROR;
+        } else {
+            errorMessage = Constants.ErrorMessages.INSTANCE_USER_ASSOCIATION_FAILURE;
+            transactionStatus = TransactionStatus.FAILED;
+        }
+        handleTransactionFailure(transaction, instanceUser,
+                errorMessage, transactionStatus, startTime);
+    }
+
+    private void handleInstanceUserFailureException(final Transaction transaction,
+                                                    final InstanceUser instanceUser,
+                                                    final long startTime) {
+        handleTransactionFailure(transaction, instanceUser, Constants.ErrorMessages.INSTANCE_USER_ASSOCIATION_FAILURE,
+                TransactionStatus.FAILED, startTime);
+    }
+
+    private void handleTransactionFailure(final Transaction transaction,
+                                          final InstanceUser instanceUser,
+                                          final String errorMessage,
+                                          final TransactionStatus transactionStatus,
+                                          final long startTime) {
+        final Integer transactionAttempt = transaction.getAttemptCount();
+        if (instanceUser != null) {
+            if (transactionAttempt >= Constants.PeriodicWorkflowExecutorConstants.MAX_ATTEMPT_COUNT) {
+                instanceUser.setResourceStatus(InstanceUserStatus.FAILED);
+                instanceUser.setStatusMessage(errorMessage);
+                instanceUser.setLastTransactionExecutionStatus(transactionStatus.toString());
+
+                final ZonedDateTime currentTime = ZonedDateTime.now(ZoneOffset.UTC);
+                final ZonedDateTime expirationTime = currentTime.plusSeconds(Constants.PeriodicWorkflowExecutorConstants.TTL);
+                instanceUser.setExpirationTime(expirationTime.toEpochSecond());
+                setMetrics(startTime, true);
+            }
+            instanceUser.setLastUpdateTime(ZonedDateTime.now(ZoneOffset.UTC).toEpochSecond());
+            instanceUser.setLastTransactionId(transaction.getPartitionKey() + ":" + transaction.getCreationTime());
+            instanceUserTable.saveUser(instanceUser);
+        }
+    }
+
+    private void updateAssociationCountOnSuccess(final ProductUser productUser) {
+        final String primaryKey = productUser.getPartitionKey();
+        final String usernameDomainSortKey = productUser.getUsernameSortKey();
+        productUserTable.addInstanceAssociationCount(primaryKey, usernameDomainSortKey);
+    }
+
+    private void setMetrics(long startTime, boolean failure) {
+        Metrics metrics = metricsHelper.newMetrics();
+        metrics.addProperty(OPERATION, ASSOCIATE_USER_TX);
+        metrics.addTime(TIME, System.currentTimeMillis() - startTime, SI.MILLI(SI.SECOND));
+        metrics.addCount(FAILURE, failure ? 1 : 0, Unit.ONE);
+        metrics.addCount(SUCCESS, failure ? 0 : 1, Unit.ONE);
+        metrics.close();
+    }
+}

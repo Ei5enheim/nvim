@@ -1,0 +1,140 @@
+package com.amazon.lmusersubscriptionservice.async;
+
+import com.amazon.coral.metrics.Metrics;
+import com.amazon.coral.metrics.helper.MetricsHelper;
+import com.amazon.lmusersubscriptionservice.asyncWorkflows.AsyncActivity;
+import com.amazon.lmusersubscriptionservice.exception.TransactionFailedException;
+import com.amazon.lmusersubscriptionservice.persistence.TransactionTable;
+import com.amazon.lmusersubscriptionservice.utils.Constants;
+import com.amazonaws.liss.persistence.dao.Transaction;
+import com.amazonaws.liss.persistence.dao.TransactionStatus;
+import com.amazonaws.liss.persistence.dao.TransactionType;
+import com.amazonaws.services.lambda.runtime.Context;
+import lombok.NonNull;
+import lombok.extern.log4j.Log4j2;
+import org.apache.logging.log4j.ThreadContext;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import javax.measure.unit.SI;
+import javax.measure.unit.Unit;
+import java.time.Instant;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
+import java.util.Map;
+
+import static com.amazon.lmusersubscriptionservice.utils.Constants.MetricsConstants.TIME;
+import static com.amazon.lmusersubscriptionservice.utils.Constants.MetricsConstants.OPERATION;
+import static com.amazon.lmusersubscriptionservice.utils.Constants.MetricsConstants.SUCCESS;
+import static com.amazon.lmusersubscriptionservice.utils.Constants.MetricsConstants.FAILURE;
+
+@Log4j2
+public class AsyncWorkflowExecutorLambda {
+
+    @NonNull
+    private final Map<TransactionType, AsyncActivity> transactionTypeToAsyncActivityMap;
+
+    @NonNull
+    private final TransactionTable transactionTable;
+
+    private static final String TRANSACTION_ID_FORMAT = "%s:%s";
+
+    @NonNull final MetricsHelper metricsHelper;
+
+    @Inject
+    public AsyncWorkflowExecutorLambda(
+            @Named("TransactionTypeToActivityMap")final Map<TransactionType, AsyncActivity> transactionTypeToAsyncActivityMap,
+            final TransactionTable transactionTable, final MetricsHelper metricsHelper) {
+        this.transactionTypeToAsyncActivityMap = transactionTypeToAsyncActivityMap;
+        this.transactionTable = transactionTable;
+        this.metricsHelper = metricsHelper;
+    }
+
+    public void run(@NonNull final Transaction transaction, @NonNull final Context context) {
+        final String transactionId = String.format(TRANSACTION_ID_FORMAT, transaction.getPartitionKey(),
+                transaction.getCreationTime());
+        ThreadContext.put("AWSRequestId", transactionId);
+        log.info("Executing transaction: {}", transaction);
+        final TransactionType transactionType = transaction.getTransactionType();
+        log.info("Transaction type is: {}", transactionType);
+        this.updateTransactionToExecuting(transaction);
+        final AsyncActivity asyncActivity = transactionTypeToAsyncActivityMap.get(transactionType);
+        if(asyncActivity != null) {
+            executeTransaction(transaction, asyncActivity);
+        } else {
+            log.error("Invalid or non configured transaction type: {}", transactionType);
+            transaction.setTransactionStatus(TransactionStatus.INVALID_TRANSACTION);
+        }
+        transactionTable.saveTransaction(transaction);
+    }
+
+    private void executeTransaction(final Transaction transaction, final AsyncActivity asyncActivity) {
+
+        long startTime = System.currentTimeMillis();
+
+        try {
+            asyncActivity.executeTransaction(transaction);
+            handleTransactionSuccess(transaction);
+            setMetrics(startTime, false);
+        } catch (final Exception e) {
+            log.warn("Exception while executing the transaction {}", transaction.getPartitionKey(), e);
+            final int transactionAttempt = transaction.getAttemptCount();
+            if(transactionAttempt >= Constants.PeriodicWorkflowExecutorConstants.MAX_ATTEMPT_COUNT) {
+                setMetrics(startTime, true);
+                log.error("This transaction has failed multiple times, reached max limit failing the transaction {}", transaction, e);
+                handleTransactionFailure(transaction);
+            } else {
+                log.error("Transaction will be retried haven't exhausted all the retries {}", transaction);
+                handleTransactionIntermediateFailure(transaction);
+            }
+        }
+    }
+
+    private void handleTransactionIntermediateFailure(final Transaction transaction) {
+        transaction.setTransactionStatus(TransactionStatus.PENDING);
+        final Long transactionExecutionTimeLong = transaction.getLastExecutionTime();
+        final ZonedDateTime transactionExecutionTime = ZonedDateTime
+                .ofInstant(Instant.ofEpochSecond(transactionExecutionTimeLong), ZoneOffset.UTC);
+
+        // back off a little for REGISTER_IDENTITY_PROVIDER
+        if (transaction.getTransactionType().equals(TransactionType.REGISTER_IDENTITY_PROVIDER)) {
+            final ZonedDateTime transactionScheduledTime = transactionExecutionTime
+                    .plusSeconds(Constants.PeriodicWorkflowExecutorConstants.REGISTER_IDENTITY_SCHEDULING_DELAY_IN_SECONDS);
+            transaction.setScheduledTime(transactionScheduledTime.toEpochSecond());
+        } else {
+            final ZonedDateTime transactionScheduledTime = transactionExecutionTime
+                    .plusSeconds(Constants.PeriodicWorkflowExecutorConstants.SCHEDULING_DELAY_IN_SECONDS);
+            transaction.setScheduledTime(transactionScheduledTime.toEpochSecond());
+        }
+    }
+
+    private void updateTransactionToExecuting(final Transaction transaction) {
+        transaction.setTransactionStatus(TransactionStatus.EXECUTING);
+
+        final int attemptCount = transaction.getAttemptCount();
+        transaction.setAttemptCount(attemptCount + 1);
+
+        transaction.setLastExecutionTime(ZonedDateTime.now(ZoneOffset.UTC).toEpochSecond());
+        transactionTable.saveTransaction(transaction);
+    }
+
+    private void handleTransactionSuccess(final Transaction transaction) {
+        final ZonedDateTime currentTime = ZonedDateTime.now(ZoneOffset.UTC);
+        final ZonedDateTime expirationTime = currentTime.plusSeconds(Constants.PeriodicWorkflowExecutorConstants.TTL);
+        transaction.setTransactionStatus(TransactionStatus.COMPLETED);
+        transaction.setExpirationTime(expirationTime.toEpochSecond());
+    }
+
+    private void handleTransactionFailure(final Transaction transaction) {
+        transaction.setTransactionStatus(TransactionStatus.FAILED);
+    }
+
+    private void setMetrics(long startTime, boolean failure) {
+        Metrics metrics = metricsHelper.newMetrics();
+        metrics.addProperty(OPERATION, AsyncWorkflowExecutorLambda.class.getSimpleName());
+        metrics.addTime(TIME, System.currentTimeMillis() - startTime, SI.MILLI(SI.SECOND));
+        metrics.addCount(FAILURE, failure ? 1 : 0, Unit.ONE);
+        metrics.addCount(SUCCESS, failure ? 0 : 1, Unit.ONE);
+        metrics.close();
+    }
+}

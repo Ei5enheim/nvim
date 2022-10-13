@@ -1,0 +1,31 @@
+<!DOCTYPE plist PUBLIC "-AppleDTD PLIST 1.0EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+        <key>HOME</key>
+        <string>/Users/rgopidi</string>
+    </dict>
+    <key>StandardOutPath</key>
+    <string>/Users/rgopidi/.unison/unison.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/rgopidi/.unison/unison.log</string>
+    <key>KeepAlive</key>
+    <true/>
+    <key>Label</key>
+    <string>unison.launch</string>
+    <key>Program</key>
+    <string>/opt/homebrew/bin/unison</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/opt/homebrew/bin/unison</string>
+        <string>-ui</string>
+        <string>text</string>
+        <string>default</string>
+    </array>
+    <key>StartInterval</key>
+    <integer>30</integer>
+</dict>
+</plist>

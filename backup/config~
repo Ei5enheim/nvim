@@ -1,0 +1,8 @@
+# Enable Kerb Forwarding
+Host git.amazon.com
+	GSSAPIAuthentication yes
+    GSSAPIDelegateCredentials yes
+Host clouddesk
+    HostName dev-dsk-rgopidi-2a-14e99663.us-west-2.amazon.com
+    User rgopidi
+

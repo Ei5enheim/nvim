@@ -8,7 +8,8 @@ Plug 'preservim/nerdtree'
 Plug 'vim-ruby/vim-ruby'
 Plug 'tpope/vim-rails'
 "Plug '/usr/local/opt/fzf'
-Plug 'junegunn/fzf', { 'do': { -> fzf#install() } }
+"Plug 'junegunn/fzf', { 'do': { -> fzf#install() } }
+Plug 'junegunn/fzf', {'dir': '~/.fzf','do': './install --all'}
 Plug 'junegunn/fzf.vim'
 Plug 'Shougo/neocomplete.vim'
 Plug 'tpope/vim-commentary'
@@ -22,8 +23,10 @@ Plug 'haya14busa/is.vim'
 Plug 'mhinz/vim-grepper'
 Plug 'itchyny/lightline.vim'
 Plug 'tpope/vim-fugitive'
-" Plug 'prettier/vim-prettier', { 'do': 'yarn install --frozen-lockfile --production' }
+Plug 'prettier/vim-prettier', { 'do': 'yarn install --frozen-lockfile --production' }
 Plug 'pseewald/vim-anyfold'
+Plug 'neoclide/coc.nvim', {'branch': 'release'}
+Plug 'antoinemadec/coc-fzf', {'branch': 'release'}
 
 " List ends here. Plugins become visible to Vim after this call.
 call plug#end()

@@ -1,0 +1,44 @@
+echo -e -n "\x1b[\x31 q"
+PS1="%F{green} %~> %f"
+# F{black}" 
+#
+# ssh-add
+
+export PATH=/opt/homebrew/opt/ruby/bin:/opt/homebrew/bin:/opt/homebrew/lib/ruby/gems/3.1.0/bin:$HOME/.toolbox/bin:/usr/local/bin/aws_completer:/Users/rgopidi/tools:$PATH
+
+function bmp() { brazil ws use --package $1; }
+export JAVA_HOME="/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home"
+
+# authenticate with kerberos and midway
+# kinit && mwinit
+
+# run it for every workspace
+alias vim='~/tools/nvim/bin/nvim'
+alias rg00='ssh dev-dsk-rgopidi-2a-14e99663.us-west-2.amazon.com'
+alias mw='kinit && mwinit'
+alias ws='cd /Volumes/workplace'
+
+# brazil related aliases
+alias brs='brazil setup platform-support'
+alias bsync='brazil ws sync'
+alias bba='brazil-recursive-cmd --allPackages brazil-build'
+
+function bwc() { brazil workspace create --root $1; cd $1; } 
+function bws() { brazil workspace show; } 
+function bwv() { brazil ws use --versionset $1; }
+function bwp() { brazil ws use --package $1; }
+
+# open chrome tab
+func tab() { open -a "Google Chrome" $1; }
+
+autoload bashcompinit && bashcompinit
+autoload -Uz compinit && compinit
+complete -C '/usr/local/bin/aws_completer' aws
+
+# search history
+bindkey "^[[A" history-beginning-search-backward
+bindkey "^[[B" history-beginning-search-forward
+
+# unison auto start fix
+# launchctl load ~/Library/LaunchAgents/local.unison-file-sync.plist
+# launchctl unload ~/Library/LaunchAgents/local.unison-file-sync.plist

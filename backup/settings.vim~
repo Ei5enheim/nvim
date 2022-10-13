@@ -20,7 +20,8 @@ set cursorline        " Highlight the current line
 set autoread          " Automatically reload the file when it is changed from an outside program
 set omnifunc=syntaxcomplete#Complete " Enable omnicompletion
 
-set nofoldenable " fold/unfold block under cursor's scope: zc  zo, za (toggle)
+set nofoldenable
+" fold/unfold block under cursor's scope: zc  zo, za (toggle)
 " fold/unfold all blocks: zO, zC, zA, zM, zR for M and R cursor need not be in
 " a block
 " fold/unfold one level of block at a time: zm, zr

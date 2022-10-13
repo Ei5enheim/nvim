@@ -1,0 +1,65 @@
+package com.amazon.lmusersubscriptionservice.asyncWorkflows;
+
+import com.amazon.aws.adms.AccountEventMessage;
+import com.amazon.aws.adms.ClientEventResponseCode;
+import com.amazon.lmusersubscriptionservice.serialization.SerializerDeserializer;
+import com.amazon.lmusersubscriptionservice.utils.AESUtils;
+import com.amazonaws.liss.persistence.dao.Customer;
+import com.amazonaws.liss.persistence.dao.Transaction;
+import com.amazonaws.liss.persistence.dynamodb.CustomerTable;
+import com.amazonaws.liss.persistence.utils.Constants.CustomerTable.CustomerStatus;
+import lombok.NonNull;
+import lombok.extern.log4j.Log4j2;
+
+@Log4j2
+public class AESRestoreEventHandler implements AESEventTypeHandler {
+
+    @NonNull
+    private final CustomerTable customerTable;
+
+    @NonNull
+    private final AESUtils aesUtils;
+
+    public AESRestoreEventHandler(final CustomerTable customerTable,
+                                  final AESUtils aesUtils) {
+        this.customerTable = customerTable;
+        this.aesUtils = aesUtils;
+        this.aesUtils
+    }
+
+    @Override
+    public void handleAESEvent(final Transaction transaction) {
+        final AccountEventMessage accountEventMessage = transaction
+                .getTransactionContext()
+                .getAesTransactionContext()
+                .getAccountEventMessage();
+        final String serializedAccountEventMessage = SerializerDeserializer.serialize(accountEventMessage);
+        final Customer customer = customerTable.getCustomer(accountEventMessage.getAccountId());
+        log.info("Handling restore event for customer {}, {}", customer, serializedAccountEventMessage);
+        this.restoreAccount(customer, accountEventMessage);
+    }
+
+    /**
+     * Method to restore the account.
+     *
+     * @param customer            customer dao.
+     * @param accountEventMessage account event message.
+     */
+    private void restoreAccount(final Customer customer, final AccountEventMessage accountEventMessage) {
+        final String ackResponseCode = ClientEventResponseCode.SUCCESS;
+        final CustomerStatus currentStatus = customer.getCustomerStatus();
+        final String customerAccountId = customer.getAccountId();
+
+        /**
+         * We expect the customer status to be "ISOLATED" to honor restore message.
+         */
+        if (currentStatus == CustomerStatus.ISOLATED) {
+            log.info("Start restoring the account: {}, current status {}",
+                    customerAccountId, currentStatus);
+            customer.setCustomerStatus(CustomerStatus.ACTIVE);
+            customerTable.saveCustomer(customer);
+            log.info("Restored the account: {}", customerAccountId);
+        }
+        aesUtils.acknowledgeEvent(accountEventMessage, ackResponseCode);
+    }
+}

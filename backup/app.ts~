@@ -1,0 +1,79 @@
+#!/usr/bin/env node
+import { App, Duration } from 'aws-cdk-lib';
+import { DependencyModel, DeploymentPipeline, Platform } from '@amzn/pipelines';
+import { BrazilPackage } from '@amzn/pipelines';
+import { SoftwareType } from '@amzn/pipelines';
+import { ServiceStack } from './serviceStack';
+
+
+// Set up your CDK App
+const app = new App();
+
+const applicationAccount = '137687868464';
+
+const pipeline = new DeploymentPipeline(app, 'Pipeline', {
+  account: applicationAccount,
+  pipelineName: 'BT101Rgopidi',
+  versionSet: {
+    name: 'BT101Rgopidi/development',
+    dependencyModel: DependencyModel.BRAZIL,
+  },
+  versionSetPlatform: Platform.AL2_X86_64,
+  trackingVersionSet: 'live', // Or any other version set you prefer
+  bindleGuid: 'amzn1.bindle.resource.35vyr5qmsoerfjdl7p5qohxsa',
+  description: 'BT101 pipeline managed by CDK',
+  pipelineId: '4857635',
+  selfMutate: false,
+});
+
+[
+  'BT101Rgopidi',
+  'BT101RgopidiTests',
+].map(pkg => pipeline.addPackageToAutobuild(BrazilPackage.fromString(pkg)));
+
+const stageName = 'alpha';
+const alphaStage = pipeline.addStage(stageName, { isProd: false });
+const deploymentGroup = alphaStage.addDeploymentGroup({
+  name: `alphaApplication`
+});
+
+const deploymentProps = {
+  env: pipeline.deploymentEnvironmentFor(applicationAccount, 'us-west-2'),
+  softwareType: SoftwareType.INFRASTRUCTURE,
+  stage: stageName
+};
+const serviceStack = new ServiceStack(app, `BT101Rgopidi-Service-${stageName}`, deploymentProps);
+deploymentGroup.addStacks(serviceStack);
+
+// Hydra Test Run Definition, which defines parameters to run the test step.
+// See: https://w.amazon.com/bin/view/HydraTestPlatform/RunDefinition/
+const runDefinition = {
+  "SchemaVersion": "1.0",
+  "SchemaType": "HydraJavaJUnit",
+  "HydraParameters": {
+    "Runtime": "java11",
+    "ComputeEngine": "Lambda"
+  },
+  "HandlerParameters": {
+    "TestClasses": {
+      "PackageSelector": [
+        {
+          "Package": "com.amazon.bt101rgopidi",
+          "ClassNamePattern": ".*Test"
+        }
+      ]
+    }
+  },
+  "EnvironmentVariables": {
+    "Stage": "alpha"
+  }
+};
+
+const hydraApproval = serviceStack.hydraResources.createApprovalWorkflowStep({
+  runDefinition,
+  versionSetPlatform: Platform.AL2_X86_64
+});
+
+alphaStage.addApprovalWorkflow('Integ Test', {
+   sequence: [hydraApproval]
+});

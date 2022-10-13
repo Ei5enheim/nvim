@@ -1,0 +1,76 @@
+" Always show the signcolumn, otherwise it would shift the text each time
+" diagnostics appear/become resolved.
+set signcolumn=yes
+set hidden
+set nobackup                  " Remove them pesky .swp files"
+set nowritebackup
+set updatetime=300            " ...so screen draws don't lag"
+set shortmess+=c              " Don't pass messages to |ins-completion-menu|
+
+nmap <silent> [g <Plug>(coc-diagnostic-prev)
+nmap <silent> ]g <Plug>(coc-diagnostic-next)
+
+" Use tab for trigger completion with characters ahead and navigate.
+" NOTE: There's always complete item selected by default, you may want to enable
+" no select by `"suggest.noselect": true` in your configuration file.
+" NOTE: Use command ':verbose imap <tab>' to make sure tab is not mapped by
+" other plugin before putting this into your config.
+inoremap <silent><expr> <TAB>
+      \ coc#pum#visible() ? coc#pum#next(1) :
+      \ CheckBackspace() ? "\<Tab>" :
+      \ coc#refresh()
+inoremap <expr><S-TAB> coc#pum#visible() ? coc#pum#prev(1) : "\<C-h>"
+" Make <CR> to accept selected completion item or notify coc.nvim to format
+" <C-g>u breaks current undo, please make your own choice.
+inoremap <silent><expr> <CR> coc#pum#visible() ? coc#pum#confirm()
+                              \: "\<C-g>u\<CR>\<c-r>=coc#on_enter()\<CR>"
+
+" GoTo code navigation.
+"nmap <silent> gd <Plug>(coc-definition)
+"nmap <silent> gt <Plug>(coc-type-definition)
+"nmap <silent> gi <Plug>(coc-implementation)
+nmap <silent> gr <Plug>(coc-references)
+nmap <silent> gd :call CocAction('jumpDefinition', 'vsplit')<CR>
+nmap <silent> gt :call CocAction('jumpTypeDefinition', 'tabe')<CR>)
+nnoremap <silent> gi :call CocAction('jumpImplementation', 'vsplit')<CR>)
+"nmap <silent> gr <Plug>(coc-references)
+
+" Use K to show documentation in preview window."
+nnoremap <silent> <C-t> :call ShowDocumentation()<CR>
+inoremap <silent> <C-t> <esc>:call ShowDocumentation()<CR>
+
+function! ShowDocumentation()
+  if CocAction('hasProvider', 'hover')
+    call CocActionAsync('doHover')
+  else
+    call feedkeys('K', 'in')
+  endif
+endfunction
+
+" Highlight the symbol and its references when holding the cursor.
+autocmd CursorHold * silent call CocActionAsync('highlight')
+
+" Symbol renaming.
+nmap <leader>rn <Plug>(coc-rename)
+
+" Formatting selected code.
+xmap <leader>f  <Plug>(coc-format-selected)
+nmap <leader>f  <Plug>(coc-format-selected)
+
+au FileType java call SetWorkspaceFolders()
+
+function! SetWorkspaceFolders() abort
+    " Only set g:WorkspaceFolders if it is not already set
+    if exists("g:WorkspaceFolders") | return | endif
+
+    if executable("findup")
+        let l:ws_dir = trim(system("cd '" . expand("%:h") . "' && findup packageInfo"))
+        " Bemol conveniently generates a '$WS_DIR/.bemol/ws_root_folders' file, so let's leverage it
+        let l:folders_file = l:ws_dir . "/.bemol/ws_root_folders"
+        if filereadable(l:folders_file)
+            let l:ws_folders = readfile(l:folders_file)
+            let g:WorkspaceFolders = filter(l:ws_folders, "isdirectory(v:val)")
+        endif
+    endif
+endfunction
+

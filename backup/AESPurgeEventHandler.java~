@@ -1,0 +1,35 @@
+package com.amazon.lmusersubscriptionservice.asyncWorkflows;
+
+import com.amazon.aws.adms.AccountEventMessage;
+import com.amazon.aws.adms.ClientEventResponseCode;
+import com.amazon.lmusersubscriptionservice.serialization.SerializerDeserializer;
+import com.amazon.lmusersubscriptionservice.utils.AESUtils;
+import com.amazonaws.liss.persistence.dao.Transaction;
+import lombok.NonNull;
+import lombok.extern.log4j.Log4j2;
+
+@Log4j2
+public class AESPurgeEventHandler implements AESEventTypeHandler {
+
+    @NonNull
+    private final AESUtils ae;
+    private final 
+
+
+    public AESPurgeEventHandler(final AESUtils aesUtils) {
+        this.ae = aesUtils;
+    }
+
+    @Override
+    public void handleAESEvent(@NonNull final Transaction transaction) {
+        final AccountEventMessage accountEventMessage = transaction
+                .getTransactionContext()
+                .getAesTransactionContext()
+                .getAccountEventMessage();
+        final String serializedAccountEventMessage = SerializerDeserializer.serialize(accountEventMessage);
+        final String accountId = accountEventMessage.getAccountId();
+        log.info("Handling restore event for customer {}, {}", accountId, serializedAccountEventMessage);
+        ae.acknowledgeEvent(accountEventMessage, ClientEventResponseCode.NO_OPERATION);
+        log.info("Purged the account: " + accountId);
+    }
+}

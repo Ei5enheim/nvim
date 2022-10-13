@@ -1,0 +1,140 @@
+package com.amazon.bt101rgopidi.lambda.calculator;
+
+import com.amazonaws.services.lambda.runtime.Context;
+import com.amazonaws.services.lambda.runtime.LambdaLogger;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+
+public class Calculator {
+
+    ObjectMapper objectMapper;
+
+    static class Operands {
+        public double x;
+        public double y;
+
+        public Operands(double x, double y) {
+            this.x = x;
+            this.y = y;
+        }
+    }
+
+    public void add(InputStream inputStream, OutputStream outputStream, Context context) throws IOException {
+        LambdaLogger logger = context.getLogger();
+        logger.log("Beginning add()");
+
+        // Get our inputs
+        Operands operands = this.getOperandsFrom(inputStream);
+        if (operands == null) {
+            respond(null, outputStream, logger);
+            return;
+        }
+        logger.log("Requested the addition of " + operands.x + " by " + operands.y);
+
+        // Find the result
+        double result = operands.x + operands.y;
+        logger.log("Result: " + result);
+
+        respond(result, outputStream, logger);
+    }
+
+
+    public void subtract(InputStream inputStream, OutputStream outputStream, Context context) throws IOException {
+        LambdaLogger logger = context.getLogger();
+        logger.log("Beginning subtract()");
+
+        // Get our inputs
+        Operands operands = this.getOperandsFrom(inputStream);
+        if (operands == null) {
+            respond(null, outputStream, logger);
+            return;
+        }
+        logger.log("Requested the subtraction of " + operands.x + " by " + operands.y);
+
+        // Find the result
+        double result = operands.x - operands.y;
+        logger.log("Result: " + result);
+
+        respond(result, outputStream, logger);
+    }
+
+    public void multiply(InputStream inputStream, OutputStream outputStream, Context context) throws IOException {
+      LambdaLogger logger = context.getLogger();
+      logger.log("Beginning multiply()");
+
+      // Get our inputs
+      Operands operands = this.getOperandsFrom(inputStream);
+      if (operands == null) {
+          respond(null, outputStream, logger);
+          return;
+      }
+      logger.log("Requested the multiplication of " + operands.x + " by " + operands.y);
+
+      // Find the result
+      double result = operands.x * operands.y;
+      logger.log("Result: " + result);
+
+      respond(result, outputStream, logger);
+    }
+
+    public void divide(InputStream inputStream, OutputStream outputStream, Context context) throws IOException {
+      LambdaLogger logger = context.getLogger();
+      logger.log("Beginning divide()");
+
+      // Get our inputs
+      Operands operands = this.getOperandsFrom(inputStream);
+
+      logger.log("Requested the division of " + operands.x + " by " + operands.y);
+
+      // Find the result
+      double result = operands.x / operands.y;
+      logger.log("Result: " + result);
+
+      respond(result, outputStream, logger);
+    }
+
+
+    public Operands getOperandsFrom(InputStream inputStream) throws IOException {
+        /*
+        Example request:
+        {
+            "x": "1",
+            "y": "2"
+        }
+        */
+        if (this.objectMapper == null) {
+            this.objectMapper = new ObjectMapper();
+        }
+
+        JsonNode request = this.objectMapper.readTree(inputStream);
+        if (request == null || !request.has("x") || !request.has("y")) {
+            return null;
+        }
+
+        return new Operands(request.get("x").asDouble(), request.get("y").asDouble());
+    }
+
+    public void respond(Double result, OutputStream outputStream, LambdaLogger logger) throws IOException {
+        if (this.objectMapper == null) {
+            this.objectMapper = new ObjectMapper();
+        }
+
+        ObjectNode response = this.objectMapper.createObjectNode();
+        response.put("statusCode", (result == null) ? "400" : "200");
+        response.put("body", String.valueOf(result));
+        String responseString = ((JsonNode) response).toString();
+
+        logger.log("Response: " + responseString);
+
+        OutputStreamWriter writer = new OutputStreamWriter(outputStream, "UTF-8");
+        writer.write(responseString);
+        writer.close();
+    }
+}

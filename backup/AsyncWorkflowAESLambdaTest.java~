@@ -1,0 +1,51 @@
+package com.amazon.lmusersubscriptionservice.async;
+import com.amazon.lmusersubscriptionservice.factory.AESTransactionFactory;
+import com.amazon.lmusersubscriptionservice.make.LISSMake;
+import com.amazon.lmusersubscriptionservice.persistence.TransactionTable;
+import com.amazonaws.liss.persistence.dao.Transaction;
+import com.amazonaws.services.lambda.runtime.Context;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.Mockito;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+
+@ExtendWith(MockitoExtension.class)
+public class AsyncWorkflowAESLambdaTest {
+    @Mock
+    private Context mockContext;
+
+    @Mock
+    private TransactionTable transactionTable;
+
+    @Mock
+    private AESTransactionFactory aesTransactionFactory;
+
+    @InjectMocks
+    private AsyncWorkflowAESLambda asyncWorkflowAESLambda;
+
+    @Test
+    public void testHandleRequest_runsTransactionSuccessfully_AESTransaction() {
+        final Transaction testTransaction = LISSMake.anAESTransaction();
+        Mockito.when(aesTransactionFactory.createTransaction(
+                testTransaction.getTransactionContext().getAesTransactionContext().getAccountEventMessage(),
+                testTransaction.getTransactionType())).thenReturn(testTransaction);
+        asyncWorkflowAESLambda.run(testTransaction.getTransactionContext().getAesTransactionContext().getAccountEventMessage(), mockContext);
+        Mockito.verify(transactionTable).saveTransaction(testTransaction);
+    }
+
+    @Test
+    public void testHandleRequestWithNullRange() throws Exception {
+        Assertions.assertThrows(NullPointerException.class, () -> asyncWorkflowAESLambda.run(null, mockContext));
+    }
+    @Test
+    public void testHandleRequestWithNullContext() {
+        final Transaction testTransaction = LISSMake.anAESTransaction();
+        Assertions.assertThrows(NullPointerException.class, () -> asyncWorkflowAESLambda.run(
+                testTransaction.getTransactionContext().getAesTransactionContext().getAccountEventMessage(), null));
+    }
+
+}

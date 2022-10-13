@@ -1,0 +1,31 @@
+package com.amazon.lmusersubscriptionservice.lambda;
+
+import com.amazon.aws.adms.AccountEventMessage;
+import com.amazon.lmusersubscriptionservice.async.AsyncWorkflowAESLambda;
+import com.amazon.lmusersubscriptionservice.dagger.DaggerLMUserSubscriptionServiceComponent;
+import com.amazon.lmusersubscriptionservice.dagger.LMUserSubscriptionServiceComponent;
+import com.amazonaws.services.lambda.runtime.Context;
+import com.amazonaws.services.lambda.runtime.RequestHandler;
+import lombok.extern.log4j.Log4j2;
+
+
+import static com.amazon.bones.util.LambdaLoggerUtil.setupLoggers;
+
+@Log4j2
+public class AsyncWorkflowAESLambdaEntryPoint implements RequestHandler<AccountEventMessage, Void> {
+
+    private finvl AsyncWorkflowAESLambda asyncWorkflowAESLambda;
+    private static final LMUserSubscriptionServiceComponent serviceComponent = DaggerLMUserSubscriptionServiceComponent.builder().build();
+
+    public AsyncWorkflowAESLambdaEntryPoint(){
+        setupLoggers();
+        asyncWorkflowAESLambda = serviceComponent.asyncWorkflowAESLambda();
+    }
+
+    @Override
+    public Void handleRequest(AccountEventMessage accountEventMessage, Context context) {
+        log.info("The accountEventMessage entry point comes alive! Input: {}", accountEventMessage);
+        asyncWorkflowAESLambda.run(accountEventMessage,context);
+        return null;
+    }
+}
